@@ -28,3 +28,60 @@ services:
     - /etc/localtime:/etc/localtime:ro
     - /etc/timezone:/etc/timezone:ro 
     - /production/bitwarden_data:/data
+caddy:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.caddy.middlewares=redirectscheme
+      - traefik.http.routers.caddy.rule=Host(`caddy.mcleut.de`)
+      - traefik.http.routers.caddy_secure.rule=Host(`caddy.mcleut.de`)      
+      - traefik.http.services.caddy.loadbalancer.server.port=80
+      - traefik.http.routers.caddy_secure.middlewares=auth
+      - traefik.http.routers.caddy_secure.tls.certresolver=default
+    image: caddy:latest    
+#    volumes:
+#   - /production/caddy_data:/data    
+  cadvisor:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.cadvisor.middlewares=redirectscheme
+      - traefik.http.routers.cadvisor.rule=Host(`cadvisor.mcleut.de`)
+      - traefik.http.routers.cadvisor_secure.rule=Host(`cadvisor.mcleut.de`)      
+      - traefik.http.services.cadvisor.loadbalancer.server.port=8080
+      - traefik.http.routers.cadvisor_secure.middlewares=auth
+      - traefik.http.routers.cadvisor_secure.tls.certresolver=default        
+    image: gcr.io/google-containers/cadvisor@sha256:16bc6858dc5b7063c7d89153ad6544370eb79cb27a1b8d571f31b98673f7a324
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  checkmk:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.checkmk.middlewares=redirectscheme
+      - traefik.http.routers.checkmk.rule=Host(`checkmk.mcleut.de`)
+      - traefik.http.routers.checkmk_secure.rule=Host(`checkmk.mcleut.de`)
+      - traefik.http.services.checkmk.loadbalancer.server.port=5000
+      - traefik.http.routers.checkmk_secure.middlewares=auth
+      - traefik.http.routers.checkmk_secure.tls.certresolver=default
+    image: checkmk/check-mk-raw:1.6.0-latest
+    volumes:
+    - /production/checkmk_data:/omd/sites
+    - /etc/localtime:/etc/localtime:ro
+
+  fail2ban:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.fail2ban.middlewares=redirectscheme
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW  
+    image: crazymax/fail2ban:latest
+    volumes:
+    - /var/log:/var/log:ro
+    - /production/fail2ban_data:/data
